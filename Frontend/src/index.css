@@ -1,0 +1,220 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* RENOV - Design System pour cabinet de formation professionnel
+Palette: Bleu nuit professionnel, blanc, accent doré élégant
+Toutes les couleurs en HSL pour la cohérence
+*/
+
+@layer base {
+  :root {
+    /* Couleurs principales */
+    --background: 0 0% 100%;
+    --foreground: 210 40% 12%;
+
+    /* Palette RENOV */
+    --primary: 210 80% 15%; /* Bleu nuit professionnel */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 210 70% 25%;
+    --primary-dark: 210 90% 8%;
+
+    --secondary: 210 25% 96%; /* Bleu très clair pour les sections */
+    --secondary-foreground: 210 40% 15%;
+
+   --accent: 27 97% 55%; /* Orange brand (#f99b50) */
+   --accent-light: 27 93% 75%;
+   --accent-dark: 27 93% 52%;
+   --accent-foreground: 0 0% 100%;
+
+
+    /* Couleurs utilitaires */
+    --muted: 210 25% 96%;
+    --muted-foreground: 210 15% 45%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 40% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 40% 12%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 25% 90%;
+    --input: 210 25% 90%;
+    --ring: 210 80% 15%;
+
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary-dark)), hsl(var(--primary)));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-light)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--secondary)));
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px hsl(var(--primary) / 0.1);
+    --shadow-elegant: 0 10px 40px hsl(var(--primary) / 0.15);
+    --shadow-accent: 0 8px 30px hsl(var(--accent) / 0.25);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 210 40% 6%;
+    --foreground: 210 25% 95%;
+
+    --primary: 210 75% 85%;
+    --primary-foreground: 210 40% 8%;
+    --primary-light: 210 70% 75%;
+    --primary-dark: 210 85% 95%;
+
+    --secondary: 210 30% 12%;
+    --secondary-foreground: 210 25% 90%;
+
+    --accent: 45 90% 65%;
+    --accent-foreground: 210 40% 8%;
+    --accent-light: 45 85% 75%;
+    --accent-dark: 45 95% 55%;
+
+    --muted: 210 30% 12%;
+    --muted-foreground: 210 15% 65%;
+
+    --card: 210 35% 8%;
+    --card-foreground: 210 25% 95%;
+
+    --popover: 210 35% 8%;
+    --popover-foreground: 210 25% 95%;
+
+    --destructive: 0 75% 65%;
+    --destructive-foreground: 210 25% 95%;
+
+    --border: 210 30% 15%;
+    --input: 210 30% 15%;
+    --ring: 210 75% 85%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary-dark)), hsl(var(--primary)));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-light)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--secondary)));
+
+    --shadow-soft: 0 4px 20px hsl(var(--primary) / 0.2);
+    --shadow-elegant: 0 10px 40px hsl(var(--primary) / 0.25);
+    --shadow-accent: 0 8px 30px hsl(var(--accent) / 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Composants utilitaires RENOV */
+@layer components {
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .accent-gradient {
+    background: var(--gradient-accent);
+  }
+
+  .section-subtle {
+    background: var(--gradient-subtle);
+  }
+
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+
+  .shadow-accent {
+    box-shadow: var(--shadow-accent);
+  }
+
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .transition-bounce {
+    transition: var(--transition-bounce);
+  }
+
+  /* Animations spéciales */
+  .hover-lift {
+    @apply transition-smooth hover:scale-105 hover:shadow-elegant;
+  }
+
+  .fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+
+  .fade-in-left {
+    animation: fadeInLeft 0.8s ease-out forwards;
+  }
+
+  .fade-in-right {
+    animation: fadeInRight 0.8s ease-out forwards;
+  }
+}
+
+/* Keyframes pour les animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
