@@ -139,6 +139,29 @@ const Footer = () => {
                 <Youtube className="h-5 w-5" />
               </Button>
             </a>
+            {/* TikTok */}
+<a
+  href="https://www.tiktok.com/@cabinetrenov?_t=ZS-909lLLS2L3g&_r=1"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  <Button
+    variant="ghost"
+    size="icon"
+    className="hover:text-pink-600 hover:bg-pink-50"
+    title="TikTok"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5"
+      viewBox="0 0 448 512"
+      fill="currentColor"
+    >
+      <path d="M448,209.91a210.06,210.06,0,0,1-122.77-39.29V349.4a162.88,162.88,0,1,1-139.53-161.06v82.1a81.27,81.27,0,1,0,56.65,77.28V0h83.53A126.61,126.61,0,0,0,448,125.68Z"/>
+    </svg>
+  </Button>
+</a>
+
           </div>
         </div>
       </div>
