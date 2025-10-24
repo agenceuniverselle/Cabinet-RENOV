@@ -23,9 +23,7 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
 
-// ⚠️ Mets ici les identifiants de TON seeder
-const DEFAULT_EMAIL = "admin@cabinet-renov.ma";
-const DEFAULT_PWD   = "Cabinet@Renov-2025?"; // <— remplace si ton seeder a un autre mdp
+
 
 export default function Login() {
   const navigate = useNavigate();
