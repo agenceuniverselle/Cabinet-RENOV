@@ -31,8 +31,6 @@ export default function Login() {
 
   const from = location.state?.from?.pathname || "/dashboard/index";
 
-  const [email, setEmail] = React.useState(DEFAULT_EMAIL);
-  const [password, setPassword] = React.useState(DEFAULT_PWD);
   const [showPwd, setShowPwd] = React.useState(false);
   const [remember, setRemember] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
