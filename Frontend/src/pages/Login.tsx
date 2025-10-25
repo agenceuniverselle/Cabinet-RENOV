@@ -23,7 +23,9 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
 
-
+// Identifiants par défaut (utilisés uniquement si tu veux remplir automatiquement)
+const DEFAULT_EMAIL = "admin@cabinet-renov.ma";
+const DEFAULT_PWD   = "Cabinet@Renov-2025?";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -31,6 +33,9 @@ export default function Login() {
 
   const from = location.state?.from?.pathname || "/dashboard/index";
 
+  // ✅ Champs vides au démarrage
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
   const [showPwd, setShowPwd] = React.useState(false);
   const [remember, setRemember] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
@@ -97,7 +102,7 @@ export default function Login() {
               <ul className="space-y-3 text-sm">
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 mt-0.5" />
-                  Vue d’ensemble claire des demandes
+                  Vue d'ensemble claire des demandes
                 </li>
                 <li className="flex items-start gap-3">
                   <ShieldCheck className="h-5 w-5 mt-0.5" />
