@@ -9,7 +9,7 @@ function LogoutItem() {
     try { await apiFetch("/logout", { method: "POST" }); } catch { /* empty */ }
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/login", { replace: true });
+    navigate("/Renov-login@2025", { replace: true });
   };
   return <DropdownMenuItem className="text-destructive" onClick={onLogout}>Déconnexion</DropdownMenuItem>;
 }
