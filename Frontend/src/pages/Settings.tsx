@@ -109,7 +109,7 @@ const Settings: React.FC = () => {
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = payload?.message || "Échec de l’enregistrement";
+        const msg = payload?.message || "Échec de l'enregistrement";
         throw new Error(msg);
       }
       setData((prev) => ({ ...prev, ...(payload as SettingsResponse) }));
@@ -187,6 +187,15 @@ const Settings: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const setPref = (k: keyof SettingsResponse["preferences"], v: any) =>
     setData((d) => ({ ...d, preferences: { ...d.preferences, [k]: v } }));
+
+  // ✅ Vérification de sécurité pour éviter le crash
+  if (!data?.profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-muted-foreground">Chargement des paramètres...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
