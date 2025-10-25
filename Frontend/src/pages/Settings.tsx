@@ -17,23 +17,23 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
 
 // --- Types ---
-type SettingsResponse = {
-  profile: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    bio: string;
-    avatar_url: string | null;
-  };
-  notifications: {
-    email: boolean;
-    push: boolean;
-    weekly_report: boolean;
-  };
-  preferences: {
-    language: "fr" | "en" | "es";
-    timezone: string; // ex: "Europe/Paris"
-  };
+type UserProfile = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  bio: string;
+  avatar_url: string | null;
+};
+
+type NotificationSettings = {
+  email: boolean;
+  push: boolean;
+  weekly_report: boolean;
+};
+
+type Preferences = {
+  language: "fr" | "en" | "es";
+  timezone: string;
 };
 
 function firstLetters(a: string, b: string) {
@@ -44,7 +44,6 @@ function firstLetters(a: string, b: string) {
 function pickApiError(e: unknown): string {
   if (e instanceof Error) return e.message;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj = e as any;
     if (obj?.message) return String(obj.message);
   } catch { /* empty */ }
@@ -52,15 +51,48 @@ function pickApiError(e: unknown): string {
 }
 
 const Settings: React.FC = () => {
-  const [loading, setLoading] = React.useState(true);
-  const [saving,   setSaving]   = React.useState(false);
-  const [pwBusy,   setPwBusy]   = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [pwBusy, setPwBusy] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
-  const [data, setData] = React.useState<SettingsResponse>({
-    profile:   { first_name: "", last_name: "", email: "", bio: "", avatar_url: null },
-    notifications: { email: true, push: false, weekly_report: true },
-    preferences:   { language: "fr", timezone: "Europe/Paris" },
+  // Charger les données utilisateur depuis localStorage/sessionStorage
+  const getUserData = (): UserProfile => {
+    const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return {
+          first_name: user.first_name || user.name?.split(" ")[0] || "",
+          last_name: user.last_name || user.name?.split(" ")[1] || "",
+          email: user.email || "",
+          bio: user.bio || "",
+          avatar_url: user.avatar_url || null,
+        };
+      } catch {
+        // Fallback
+      }
+    }
+    return {
+      first_name: "",
+      last_name: "",
+      email: "",
+      bio: "",
+      avatar_url: null,
+    };
+  };
+
+  const [profile, setProfile] = React.useState<UserProfile>(getUserData());
+  
+  const [notifications, setNotifications] = React.useState<NotificationSettings>({
+    email: true,
+    push: false,
+    weekly_report: true,
+  });
+
+  const [preferences, setPreferences] = React.useState<Preferences>({
+    language: "fr",
+    timezone: "Europe/Paris",
   });
 
   // Password form
@@ -68,52 +100,44 @@ const Settings: React.FC = () => {
   const [newPw, setNewPw] = React.useState("");
   const [newPw2, setNewPw2] = React.useState("");
 
-  // Load settings
-  React.useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`${API_URL}/settings`, {
-          headers: { Accept: "application/json" },
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error(`Erreur ${res.status}`);
-        const payload = (await res.json()) as SettingsResponse;
-        setData(payload);
-      } catch (e) {
-        toast.error(pickApiError(e));
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  // Save settings
+  // Sauvegarder les modifications
   const saveAll = async () => {
     try {
       setSaving(true);
-      const res = await fetch(`${API_URL}/settings`, {
+      
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      if (!token) {
+        throw new Error("Non authentifié");
+      }
+
+      // Mettre à jour le profil utilisateur
+      const res = await fetch(`${API_URL}/user/profile`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          profile: {
-            first_name: data.profile.first_name,
-            last_name: data.profile.last_name,
-            email: data.profile.email,
-            bio: data.profile.bio,
-          },
-          notifications: data.notifications,
-          preferences: data.preferences,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          email: profile.email,
+          bio: profile.bio,
         }),
       });
-      const payload = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const msg = payload?.message || "Échec de l'enregistrement";
-        throw new Error(msg);
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error?.message || "Échec de la mise à jour");
       }
-      setData((prev) => ({ ...prev, ...(payload as SettingsResponse) }));
-      toast.success("Paramètres enregistrés.");
+
+      const updated = await res.json();
+      
+      // Mettre à jour le localStorage
+      const storage = localStorage.getItem("token") ? localStorage : sessionStorage;
+      storage.setItem("user", JSON.stringify(updated.user || updated));
+
+      toast.success("Paramètres enregistrés avec succès");
     } catch (e) {
       toast.error(pickApiError(e));
     } finally {
@@ -126,18 +150,49 @@ const Settings: React.FC = () => {
   const onAvatarFile = async (ev: React.ChangeEvent<HTMLInputElement>) => {
     if (!ev.target.files?.length) return;
     const file = ev.target.files[0];
+    
+    // Vérifier la taille (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("L'image ne doit pas dépasser 2MB");
+      return;
+    }
+
     const fd = new FormData();
     fd.append("avatar", file);
+    
     try {
-      const res = await fetch(`${API_URL}/settings/avatar`, {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      if (!token) {
+        throw new Error("Non authentifié");
+      }
+
+      const res = await fetch(`${API_URL}/user/avatar`, {
         method: "POST",
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: fd,
       });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.message || "Échec du téléversement");
-      setData((d) => ({ ...d, profile: { ...d.profile, avatar_url: payload.avatar_url } }));
-      toast.success("Avatar mis à jour.");
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error?.message || "Échec du téléversement");
+      }
+
+      const result = await res.json();
+      
+      setProfile((prev) => ({ ...prev, avatar_url: result.avatar_url }));
+      
+      // Mettre à jour le localStorage
+      const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        user.avatar_url = result.avatar_url;
+        const storage = localStorage.getItem("token") ? localStorage : sessionStorage;
+        storage.setItem("user", JSON.stringify(user));
+      }
+
+      toast.success("Avatar mis à jour");
     } catch (e) {
       toast.error(pickApiError(e));
     } finally {
@@ -145,32 +200,52 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Change password
+  // Changer le mot de passe
   const changePassword = async () => {
     if (!currentPw || !newPw || !newPw2) {
-      toast.error("Veuillez remplir tous les champs mot de passe.");
+      toast.error("Veuillez remplir tous les champs");
       return;
     }
     if (newPw !== newPw2) {
-      toast.error("La confirmation du mot de passe ne correspond pas.");
+      toast.error("Les mots de passe ne correspondent pas");
       return;
     }
+    if (newPw.length < 8) {
+      toast.error("Le mot de passe doit contenir au moins 8 caractères");
+      return;
+    }
+
     try {
       setPwBusy(true);
-      const res = await fetch(`${API_URL}/settings/change-password`, {
+      
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      if (!token) {
+        throw new Error("Non authentifié");
+      }
+
+      const res = await fetch(`${API_URL}/user/change-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           current_password: currentPw,
           new_password: newPw,
           new_password_confirmation: newPw2,
         }),
       });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.message || "Impossible de changer le mot de passe");
-      toast.success("Mot de passe mis à jour.");
-      setCurrentPw(""); setNewPw(""); setNewPw2("");
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error?.message || "Impossible de changer le mot de passe");
+      }
+
+      toast.success("Mot de passe mis à jour");
+      setCurrentPw("");
+      setNewPw("");
+      setNewPw2("");
     } catch (e) {
       toast.error(pickApiError(e));
     } finally {
@@ -178,31 +253,14 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Shortcuts to mutate state
-  const setProfile = (k: keyof SettingsResponse["profile"], v: string | null) =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setData((d) => ({ ...d, profile: { ...d.profile, [k]: v } as any }));
-  const setNotif = (k: keyof SettingsResponse["notifications"], v: boolean) =>
-    setData((d) => ({ ...d, notifications: { ...d.notifications, [k]: v } }));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const setPref = (k: keyof SettingsResponse["preferences"], v: any) =>
-    setData((d) => ({ ...d, preferences: { ...d.preferences, [k]: v } }));
-
-  // ✅ Vérification de sécurité pour éviter le crash
-  if (!data?.profile) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground">Chargement des paramètres...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold mb-2">Paramètres</h1>
-        <p className="text-muted-foreground">Gérez les paramètres de votre compte et de la plateforme</p>
+        <p className="text-muted-foreground">
+          Gérez les paramètres de votre compte et de la plateforme
+        </p>
       </div>
 
       {/* Profile */}
@@ -214,14 +272,20 @@ const Settings: React.FC = () => {
 
         <div className="flex items-start gap-6 mb-6">
           <Avatar className="h-20 w-20">
-            <AvatarImage src={data.profile.avatar_url ?? ""} />
+            <AvatarImage src={profile.avatar_url ?? ""} />
             <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-              {firstLetters(data.profile.first_name, data.profile.last_name)}
+              {firstLetters(profile.first_name, profile.last_name)}
             </AvatarFallback>
           </Avatar>
 
           <div className="flex-1">
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onAvatarFile} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onAvatarFile}
+            />
             <Button variant="outline" size="sm" className="mb-2" onClick={onPickAvatar}>
               Changer la photo
             </Button>
@@ -235,8 +299,8 @@ const Settings: React.FC = () => {
               <Label htmlFor="firstName">Prénom</Label>
               <Input
                 id="firstName"
-                value={data.profile.first_name}
-                onChange={(e) => setProfile("first_name", e.target.value)}
+                value={profile.first_name}
+                onChange={(e) => setProfile((p) => ({ ...p, first_name: e.target.value }))}
                 disabled={loading}
               />
             </div>
@@ -244,8 +308,8 @@ const Settings: React.FC = () => {
               <Label htmlFor="lastName">Nom</Label>
               <Input
                 id="lastName"
-                value={data.profile.last_name}
-                onChange={(e) => setProfile("last_name", e.target.value)}
+                value={profile.last_name}
+                onChange={(e) => setProfile((p) => ({ ...p, last_name: e.target.value }))}
                 disabled={loading}
               />
             </div>
@@ -256,8 +320,8 @@ const Settings: React.FC = () => {
             <Input
               id="email"
               type="email"
-              value={data.profile.email}
-              onChange={(e) => setProfile("email", e.target.value)}
+              value={profile.email}
+              onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
               disabled={loading}
             />
           </div>
@@ -266,8 +330,8 @@ const Settings: React.FC = () => {
             <Label htmlFor="bio">Bio</Label>
             <Input
               id="bio"
-              value={data.profile.bio}
-              onChange={(e) => setProfile("bio", e.target.value)}
+              value={profile.bio}
+              onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
               disabled={loading}
               placeholder="Administrateur de la plateforme"
             />
@@ -285,13 +349,17 @@ const Settings: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="emailNotif" className="text-base">Notifications par email</Label>
-              <p className="text-sm text-muted-foreground">Recevoir des notifications sur les nouvelles inscriptions</p>
+              <Label htmlFor="emailNotif" className="text-base">
+                Notifications par email
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Recevoir des notifications sur les nouvelles inscriptions
+              </p>
             </div>
             <Switch
               id="emailNotif"
-              checked={data.notifications.email}
-              onCheckedChange={(v) => setNotif("email", v)}
+              checked={notifications.email}
+              onCheckedChange={(v) => setNotifications((n) => ({ ...n, email: v }))}
               disabled={loading}
             />
           </div>
@@ -300,13 +368,17 @@ const Settings: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="pushNotif" className="text-base">Notifications push</Label>
-              <p className="text-sm text-muted-foreground">Recevoir des notifications en temps réel</p>
+              <Label htmlFor="pushNotif" className="text-base">
+                Notifications push
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Recevoir des notifications en temps réel
+              </p>
             </div>
             <Switch
               id="pushNotif"
-              checked={data.notifications.push}
-              onCheckedChange={(v) => setNotif("push", v)}
+              checked={notifications.push}
+              onCheckedChange={(v) => setNotifications((n) => ({ ...n, push: v }))}
               disabled={loading}
             />
           </div>
@@ -315,13 +387,17 @@ const Settings: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="weeklyReport" className="text-base">Rapport hebdomadaire</Label>
-              <p className="text-sm text-muted-foreground">Recevoir un résumé des activités chaque semaine</p>
+              <Label htmlFor="weeklyReport" className="text-base">
+                Rapport hebdomadaire
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Recevoir un résumé des activités chaque semaine
+              </p>
             </div>
             <Switch
               id="weeklyReport"
-              checked={data.notifications.weekly_report}
-              onCheckedChange={(v) => setNotif("weekly_report", v)}
+              checked={notifications.weekly_report}
+              onCheckedChange={(v) => setNotifications((n) => ({ ...n, weekly_report: v }))}
               disabled={loading}
             />
           </div>
@@ -339,11 +415,13 @@ const Settings: React.FC = () => {
           <div className="space-y-2">
             <Label>Langue</Label>
             <Select
-              value={data.preferences.language}
-              onValueChange={(v) => setPref("language", v as SettingsResponse["preferences"]["language"])}
+              value={preferences.language}
+              onValueChange={(v) => setPreferences((p) => ({ ...p, language: v as "fr" | "en" | "es" }))}
               disabled={loading}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="fr">Français</SelectItem>
                 <SelectItem value="en">English</SelectItem>
@@ -355,11 +433,13 @@ const Settings: React.FC = () => {
           <div className="space-y-2">
             <Label>Fuseau horaire</Label>
             <Select
-              value={data.preferences.timezone}
-              onValueChange={(v) => setPref("timezone", v)}
+              value={preferences.timezone}
+              onValueChange={(v) => setPreferences((p) => ({ ...p, timezone: v }))}
               disabled={loading}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Europe/Paris">Paris (Europe/Paris)</SelectItem>
                 <SelectItem value="Europe/London">London (Europe/London)</SelectItem>
@@ -380,17 +460,35 @@ const Settings: React.FC = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="currentPassword">Mot de passe actuel</Label>
-            <Input id="currentPassword" type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} />
+            <Input
+              id="currentPassword"
+              type="password"
+              value={currentPw}
+              onChange={(e) => setCurrentPw(e.target.value)}
+              autoComplete="current-password"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="newPassword">Nouveau mot de passe</Label>
-            <Input id="newPassword" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} />
+            <Input
+              id="newPassword"
+              type="password"
+              value={newPw}
+              onChange={(e) => setNewPw(e.target.value)}
+              autoComplete="new-password"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-            <Input id="confirmPassword" type="password" value={newPw2} onChange={(e) => setNewPw2(e.target.value)} />
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={newPw2}
+              onChange={(e) => setNewPw2(e.target.value)}
+              autoComplete="new-password"
+            />
           </div>
 
           <Button variant="outline" onClick={changePassword} disabled={pwBusy}>
